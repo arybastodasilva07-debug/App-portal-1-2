@@ -36,15 +36,15 @@ async function startServer() {
   // Use a persistent path for the database
   let dbPath = 'ppa.db';
   if (process.env.NODE_ENV === 'production') {
-    // Try /app/data first, but fallback to current directory if it fails
-    const prodPath = '/app/data';
+    // Use a local 'data' folder in the project directory
+    const prodPath = path.join(__dirname, 'data');
     try {
       if (!fs.existsSync(prodPath)) {
         fs.mkdirSync(prodPath, { recursive: true });
       }
       dbPath = path.join(prodPath, 'ppa.db');
     } catch (e) {
-      console.warn("Could not create /app/data, falling back to local ppa.db");
+      console.warn("Could not create data directory, falling back to local ppa.db in root");
       dbPath = 'ppa.db';
     }
   }
