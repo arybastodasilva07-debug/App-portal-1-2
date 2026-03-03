@@ -36,17 +36,11 @@ async function startServer() {
   // Use a persistent path for the database
   let dbPath = 'ppa.db';
   if (process.env.NODE_ENV === 'production') {
-    // Use a local 'data' folder in the project directory
-    const prodPath = path.join(__dirname, 'data');
-    try {
-      if (!fs.existsSync(prodPath)) {
-        fs.mkdirSync(prodPath, { recursive: true });
-      }
-      dbPath = path.join(prodPath, 'ppa.db');
-    } catch (e) {
-      console.warn("Could not create data directory, falling back to local ppa.db in root");
-      dbPath = 'ppa.db';
-    }
+    // Use a simple path for the database in the project root
+  let dbPath = 'ppa.db';
+  if (process.env.NODE_ENV === 'production') {
+    // In production, keep it simple in the root or a dedicated data folder if it exists
+    dbPath = path.join(process.cwd(), 'ppa.db');
   }
 
   const db = new Database(dbPath);
@@ -553,7 +547,7 @@ async function startServer() {
   // Library Routes
   // Use a persistent path for library files in production
   const libraryPath = process.env.NODE_ENV === 'production' 
-    ? path.join('/app/data', 'biblioteca') 
+    ? path.join(process.cwd(), 'biblioteca') 
     : path.join(__dirname, "public", "biblioteca");
   const FOLDER_DOCS = "Centrais de Documentos";
   const CLASSES_NOMES = ["Iniciação", "1ª Classe", "2ª Classe", "3ª Classe", "4ª Classe", "5ª Classe", "6ª Classe"];
