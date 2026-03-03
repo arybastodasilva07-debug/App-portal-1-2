@@ -33,13 +33,10 @@ async function startServer() {
   try {
     dotenv.config();
     console.log("Starting server initialization...");
-  // Use a persistent path for the database
+  // Use a simple path for the database in the project root
   let dbPath = 'ppa.db';
   if (process.env.NODE_ENV === 'production') {
-    // Use a simple path for the database in the project root
-  let dbPath = 'ppa.db';
-  if (process.env.NODE_ENV === 'production') {
-    // In production, keep it simple in the root or a dedicated data folder if it exists
+    // In production, keep it simple in the root
     dbPath = path.join(process.cwd(), 'ppa.db');
   }
 
