@@ -951,21 +951,57 @@ async function startServer() {
   });
 
   app.post("/api/admin/curriculum/add", (req, res) => {
-    const { classe, disciplina, tema, subtema, sumario } = req.body;
-    const st = subtema || '';
-    const existing = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, st) as any;
+    const { type, classe, disciplina, tema, subtema, sumario } = req.body;
     
-    if (existing) {
-      const sumarios = JSON.parse(existing.sumarios || "[]");
-      if (sumario && !sumarios.includes(sumario)) {
-        sumarios.push(sumario);
-        db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), existing.id);
+    try {
+      if (type === 'disciplina') {
+        const exists = db.prepare("SELECT id FROM curriculum WHERE classe = ? AND disciplina = ?").get(classe, disciplina);
+        if (!exists) {
+          db.prepare("INSERT INTO curriculum (classe, disciplina) VALUES (?, ?)").run(classe, disciplina);
+        }
+      } else if (type === 'tema') {
+        // Try to find a placeholder for the discipline (where tema is NULL)
+        const placeholder = db.prepare("SELECT id FROM curriculum WHERE classe = ? AND disciplina = ? AND tema IS NULL").get(classe, disciplina) as any;
+        if (placeholder) {
+          db.prepare("UPDATE curriculum SET tema = ? WHERE id = ?").run(tema, placeholder.id);
+        } else {
+          const exists = db.prepare("SELECT id FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ?").get(classe, disciplina, tema);
+          if (!exists) {
+            db.prepare("INSERT INTO curriculum (classe, disciplina, tema) VALUES (?, ?, ?)").run(classe, disciplina, tema);
+          }
+        }
+      } else if (type === 'subtema') {
+        // Try to find a placeholder for the theme (where subtema is NULL)
+        const placeholder = db.prepare("SELECT id FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema IS NULL").get(classe, disciplina, tema) as any;
+        if (placeholder) {
+          db.prepare("UPDATE curriculum SET subtema = ? WHERE id = ?").run(subtema, placeholder.id);
+        } else {
+          const exists = db.prepare("SELECT id FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, subtema);
+          if (!exists) {
+            db.prepare("INSERT INTO curriculum (classe, disciplina, tema, subtema) VALUES (?, ?, ?, ?)").run(classe, disciplina, tema, subtema);
+          }
+        }
+      } else if (type === 'sumario') {
+        let target;
+        if (subtema) {
+          target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, subtema) as any;
+        } else {
+          target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema IS NULL").get(classe, disciplina, tema) as any;
+        }
+        
+        if (target) {
+          const sumarios = JSON.parse(target.sumarios || "[]");
+          if (!sumarios.includes(sumario)) {
+            sumarios.push(sumario);
+            db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), target.id);
+          }
+        }
       }
-    } else {
-      db.prepare("INSERT INTO curriculum (classe, disciplina, tema, subtema, sumarios) VALUES (?, ?, ?, ?, ?)")
-        .run(classe, disciplina, tema, st, JSON.stringify(sumario ? [sumario] : []));
+      res.json({ success: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Erro ao adicionar item" });
     }
-    res.json({ success: true });
   });
 
   app.post("/api/admin/curriculum/edit", (req, res) => {
@@ -995,23 +1031,44 @@ async function startServer() {
 
   app.post("/api/admin/curriculum/remove", (req, res) => {
     const { classe, disciplina, tema, subtema, sumario } = req.body;
-    const st = subtema || '';
     
-    if (sumario) {
-      const existing = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, st) as any;
-      if (existing) {
-        let sumarios = JSON.parse(existing.sumarios || "[]");
-        sumarios = sumarios.filter((s: string) => s !== sumario);
-        db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), existing.id);
+    try {
+      if (sumario) {
+        let target;
+        if (subtema) {
+          target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, subtema) as any;
+        } else {
+          target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema IS NULL").get(classe, disciplina, tema) as any;
+        }
+
+        if (target) {
+          let sumarios = JSON.parse(target.sumarios || "[]");
+          sumarios = sumarios.filter((s: string) => s !== sumario);
+          db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), target.id);
+        }
+      } else if (subtema) {
+        db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").run(classe, disciplina, tema, subtema);
+        // If theme is now empty (no subthemes), restore placeholder to keep theme alive?
+        // Check if any subthemes remain for this theme
+        const remaining = db.prepare("SELECT count(*) as count FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ?").get(classe, disciplina, tema) as any;
+        if (remaining.count === 0) {
+           db.prepare("INSERT INTO curriculum (classe, disciplina, tema) VALUES (?, ?, ?)").run(classe, disciplina, tema);
+        }
+      } else if (tema) {
+        db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ?").run(classe, disciplina, tema);
+        // If discipline is now empty, restore placeholder
+        const remaining = db.prepare("SELECT count(*) as count FROM curriculum WHERE classe = ? AND disciplina = ?").get(classe, disciplina) as any;
+        if (remaining.count === 0) {
+           db.prepare("INSERT INTO curriculum (classe, disciplina) VALUES (?, ?)").run(classe, disciplina);
+        }
+      } else if (disciplina) {
+        db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ?").run(classe, disciplina);
       }
-    } else if (subtema) {
-      db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").run(classe, disciplina, tema, st);
-    } else if (tema) {
-      db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ?").run(classe, disciplina, tema);
-    } else if (disciplina) {
-      db.prepare("DELETE FROM curriculum WHERE classe = ? AND disciplina = ?").run(classe, disciplina);
+      res.json({ success: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Erro ao remover item" });
     }
-    res.json({ success: true });
   });
 
   app.post("/api/admin/update-settings", (req, res) => {

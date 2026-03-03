@@ -2193,7 +2193,7 @@ const CurriculumManager = () => {
               {expanded[cls] && (
                 <div className="p-4 space-y-2 bg-white">
                   <button onClick={() => handleAddClick({ classe: cls, type: 'disciplina' })} className="text-xs font-bold text-emerald-600 flex items-center gap-1 mb-2"><PlusCircle size={14} /> Adicionar Disciplina</button>
-                  {Array.from(new Set(curriculum.filter(c => c.classe === cls).map(c => c.disciplina))).map(disc => (
+                  {Array.from(new Set(curriculum.filter(c => c.classe === cls).map(c => c.disciplina))).filter(Boolean).map(disc => (
                     <div key={disc} className="ml-4 border-l-2 border-gray-100 pl-4">
                       <div className="flex justify-between items-center py-1">
                         <button onClick={() => toggle(cls + disc)} className="font-bold text-sm text-gray-700">{disc}</button>
@@ -2205,7 +2205,7 @@ const CurriculumManager = () => {
                       {expanded[cls + disc] && (
                         <div className="mt-2 space-y-2">
                           <button onClick={() => handleAddClick({ classe: cls, disciplina: disc, type: 'tema' })} className="text-[10px] font-bold text-blue-600 flex items-center gap-1"><PlusCircle size={12} /> Adicionar Tema</button>
-                          {Array.from(new Set(curriculum.filter(c => c.classe === cls && c.disciplina === disc).map(c => c.tema))).map(tema => (
+                          {Array.from(new Set(curriculum.filter(c => c.classe === cls && c.disciplina === disc).map(c => c.tema))).filter(Boolean).map(tema => (
                             <div key={tema} className="ml-4">
                               <div className="flex justify-between items-center py-1">
                                 <button onClick={() => toggle(cls + disc + tema)} className="text-sm text-gray-600">{tema}</button>
