@@ -1032,15 +1032,27 @@ async function startServer() {
         let target;
         if (subtema) {
           target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema = ?").get(classe, disciplina, tema, subtema) as any;
+          if (target) {
+            const sumarios = JSON.parse(target.sumarios || "[]");
+            if (!sumarios.includes(sumario)) {
+              sumarios.push(sumario);
+              db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), target.id);
+            }
+          }
         } else {
+          // Adding to theme (no subtheme)
           target = db.prepare("SELECT * FROM curriculum WHERE classe = ? AND disciplina = ? AND tema = ? AND subtema IS NULL").get(classe, disciplina, tema) as any;
-        }
-        
-        if (target) {
-          const sumarios = JSON.parse(target.sumarios || "[]");
-          if (!sumarios.includes(sumario)) {
-            sumarios.push(sumario);
-            db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), target.id);
+          
+          if (target) {
+            const sumarios = JSON.parse(target.sumarios || "[]");
+            if (!sumarios.includes(sumario)) {
+              sumarios.push(sumario);
+              db.prepare("UPDATE curriculum SET sumarios = ? WHERE id = ?").run(JSON.stringify(sumarios), target.id);
+            }
+          } else {
+            // No placeholder found (theme exists but all rows have subthemes), create one
+            db.prepare("INSERT INTO curriculum (classe, disciplina, tema, subtema, sumarios) VALUES (?, ?, ?, ?, ?)")
+              .run(classe, disciplina, tema, null, JSON.stringify([sumario]));
           }
         }
       }

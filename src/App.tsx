@@ -2027,7 +2027,7 @@ const CurriculumManager = () => {
 
   const fetchCurriculum = async () => {
     try {
-      const res = await fetch('/api/curriculum');
+      const res = await fetch(`/api/curriculum?t=${Date.now()}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setCurriculum(data);
@@ -2044,7 +2044,7 @@ const CurriculumManager = () => {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch('/api/library/files');
+      const res = await fetch(`/api/library/files?t=${Date.now()}`);
       const data = await res.json();
       setFiles(data);
     } catch (err) {
@@ -2499,7 +2499,7 @@ const AdminPanel = () => {
 
   const fetchNews = async () => {
     try {
-      const res = await fetch('/api/news');
+      const res = await fetch(`/api/news?t=${Date.now()}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setNews(data);
@@ -2568,7 +2568,7 @@ const AdminPanel = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch(`/api/settings?t=${Date.now()}`);
       const data = await res.json();
       setSettings(data);
     } catch (err) {
