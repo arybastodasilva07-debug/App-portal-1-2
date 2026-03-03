@@ -736,6 +736,53 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.post("/api/admin/news/sync", async (req, res) => {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: "Pesquise as notícias mais recentes (últimas 24h) sobre o Ministério da Educação de Angola (MED), Governo de Angola e sindicatos da educação em Angola. Retorne uma lista de notícias em formato JSON. Cada notícia deve ter: title, content, category (MED, Pedagogia ou Aviso), source (nome do site oficial). Verifique a credibilidade das fontes (apenas sites oficiais .gov.ao ou jornais de renome).",
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                content: { type: Type.STRING },
+                category: { type: Type.STRING },
+                source: { type: Type.STRING }
+              },
+            },
+          },
+        },
+      });
+
+      const newsList = JSON.parse(response.text || "[]");
+      
+      const stmt = db.prepare("INSERT INTO news (title, content, category, source, expires_at) VALUES (?, ?, ?, ?, ?)");
+      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 14 days default
+
+      const added = [];
+      for (const news of newsList) {
+        // Check for duplicates (simple check by title)
+        const exists = db.prepare("SELECT id FROM news WHERE title = ?").get(news.title);
+        if (!exists) {
+          stmt.run(news.title, news.content, news.category || 'Aviso', news.source || 'MED', expiresAt);
+          added.push(news);
+        }
+      }
+
+      res.json({ success: true, addedCount: added.length, added });
+    } catch (error) {
+      console.error("Error syncing news:", error);
+      res.status(500).json({ error: "Erro ao sincronizar notícias" });
+    }
+  });
+
   // Feedback Routes
   app.post("/api/feedback", async (req, res) => {
     const { userId, content, type } = req.body;

@@ -2530,44 +2530,22 @@ const AdminPanel = () => {
   const syncNews = async () => {
     setSyncingNews(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: (process.env as any).GEMINI_API_KEY });
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: "Pesquise as notícias mais recentes (últimas 24h) sobre o Ministério da Educação de Angola (MED), Governo de Angola e sindicatos da educação em Angola. Retorne uma lista de notícias em formato JSON. Cada notícia deve ter: title, content, category (MED, Pedagogia ou Aviso), source (nome do site oficial). Verifique a credibilidade das fontes (apenas sites oficiais .gov.ao ou jornais de renome).",
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                content: { type: Type.STRING },
-                category: { type: Type.STRING },
-                source: { type: Type.STRING }
-              },
-              required: ["title", "content", "category", "source"]
-            }
-          }
-        }
-      });
-
-      const newsList = JSON.parse(response.text || "[]");
-      
-      const res = await fetch('/api/ai/save-synced-news', { 
+      const res = await fetch('/api/admin/news/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newsList })
+        headers: { 'Content-Type': 'application/json' }
       });
       
       const data = await res.json();
+      
       if (res.ok) {
-        addToast(`${data.count} novas notícias sincronizadas com sucesso!`, 'success');
+        if (data.addedCount > 0) {
+          addToast(`${data.addedCount} novas notícias sincronizadas com sucesso!`, 'success');
+        } else {
+          addToast("Nenhuma notícia nova encontrada.", 'info');
+        }
         fetchNews();
       } else {
-        throw new Error(data.error || "Erro ao salvar notícias");
+        throw new Error(data.error || "Erro ao sincronizar notícias");
       }
     } catch (err) {
       console.error("Sync News Error:", err);
