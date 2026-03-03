@@ -1850,16 +1850,16 @@ const LibraryView = () => {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+        <div className="flex bg-gray-100 p-1 rounded-xl mb-4 overflow-x-auto whitespace-nowrap gap-1 no-scrollbar">
           <button 
             onClick={() => { setActiveTab('manuais'); setCurrentPath([]); setSearchQuery(''); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'manuais' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 flex-shrink-0 ${activeTab === 'manuais' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <Folder size={16} /> Manuais INIDE
           </button>
           <button 
             onClick={() => { setActiveTab('central'); setCurrentPath([]); setSearchQuery(''); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'central' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 flex-shrink-0 ${activeTab === 'central' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <Library size={16} /> Central de Documentos
           </button>
@@ -2177,9 +2177,9 @@ const CurriculumManager = () => {
 
   return (
     <div className="p-6">
-      <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
-        <button onClick={() => setActiveTab('manuais')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'manuais' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}>Adicionar novo currículo</button>
-        <button onClick={() => setActiveTab('gerenciador')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'gerenciador' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}>Gerenciador de currículo</button>
+      <div className="flex bg-gray-100 p-1 rounded-xl mb-6 overflow-x-auto whitespace-nowrap gap-1 no-scrollbar">
+        <button onClick={() => setActiveTab('manuais')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${activeTab === 'manuais' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>Adicionar novo currículo</button>
+        <button onClick={() => setActiveTab('gerenciador')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${activeTab === 'gerenciador' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>Gerenciador de currículo</button>
       </div>
 
       {activeTab === 'manuais' && (
@@ -2721,46 +2721,46 @@ const AdminPanel = () => {
           </div>
           <h2 className="text-xl font-bold text-gray-900">🛡️ Gestão Administrativa</h2>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-xl">
+        <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto whitespace-nowrap gap-1 no-scrollbar">
           <button 
             onClick={() => setAdminTab('users')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'users' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'users' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             👥 Usuários
           </button>
           <button 
             onClick={() => setAdminTab('curriculum')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'curriculum' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'curriculum' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             📚 Currículo
           </button>
           <button 
             onClick={() => setAdminTab('settings')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'settings' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'settings' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             ⚙️ Configurações
           </button>
           <button 
             onClick={() => setAdminTab('news')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'news' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'news' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             🔔 Notícias
           </button>
           <button 
             onClick={() => setAdminTab('feedback')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'feedback' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'feedback' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             💬 Feedback
           </button>
           <button 
             onClick={() => setAdminTab('community')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'community' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'community' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             🌍 Moderação
           </button>
           <button 
             onClick={() => setAdminTab('publish')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${adminTab === 'publish' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${adminTab === 'publish' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             🚀 Publicar
           </button>
