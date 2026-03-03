@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { GoogleGenAI, Type } from "@google/genai";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { angolaData } from './angolaData';
 import { 
   BarChart, 
@@ -88,6 +90,7 @@ interface UserData {
   biografia?: string;
   especializacoes?: string;
   foto_url?: string;
+  password?: string;
 }
 
 interface NewsItem {
@@ -615,18 +618,19 @@ const Login = ({ onLogin, theme, toggleTheme }: { onLogin: (user: UserData) => v
   const [professorNome, setProfessorNome] = useState('');
   const [provincia, setProvincia] = useState('');
   const [municipio, setMunicipio] = useState('');
+  const [plano, setPlano] = useState('Bronze');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState('');
 
   const handleSolicitarWhatsApp = () => {
-    const message = `Olá Prof. António Basto! Sou o professor(a) ${professorNome}. Escola: ${escola}. Província: ${provincia}. Município: ${municipio}. Contacto: ${identifier}. Gostaria de adquirir o acesso ao Portal Pedagógico Angola.`;
+    const message = `Olá Prof. António Basto! Sou o professor(a) ${professorNome}. Escola: ${escola}. Província: ${provincia}. Município: ${municipio}. Plano: ${plano}. Contacto: ${identifier}. Gostaria de adquirir o acesso ao Portal Pedagógico Angola.`;
     const url = `https://wa.me/244954458413?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
   const handleSolicitarSMS = () => {
-    const message = `Olá Prof. António Basto! Sou o professor(a) ${professorNome}. Escola: ${escola}. Província: ${provincia}. Município: ${municipio}. Contacto: ${identifier}. Gostaria de adquirir o acesso ao Portal Pedagógico Angola.`;
+    const message = `Olá Prof. António Basto! Sou o professor(a) ${professorNome}. Escola: ${escola}. Província: ${provincia}. Município: ${municipio}. Plano: ${plano}. Contacto: ${identifier}. Gostaria de adquirir o acesso ao Portal Pedagógico Angola.`;
     const url = `sms:+244954458413?body=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -644,7 +648,8 @@ const Login = ({ onLogin, theme, toggleTheme }: { onLogin: (user: UserData) => v
           professor_nome: professorNome,
           escola,
           provincia,
-          municipio
+          municipio,
+          plano_tipo: plano
         })
       });
       const data = await res.json();
@@ -709,7 +714,8 @@ const Login = ({ onLogin, theme, toggleTheme }: { onLogin: (user: UserData) => v
           escola: isRegister ? escola : undefined,
           professor_nome: isRegister ? professorNome : undefined,
           provincia: isRegister ? provincia : undefined,
-          municipio: isRegister ? municipio : undefined
+          municipio: isRegister ? municipio : undefined,
+          plano_tipo: isRegister ? plano : undefined
         })
       });
 
@@ -904,6 +910,30 @@ const Login = ({ onLogin, theme, toggleTheme }: { onLogin: (user: UserData) => v
                   </select>
                 </div>
               </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Escolha o Plano</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Bronze', 'Prata', 'Ouro'].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlano(p)}
+                      className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${
+                        plano === p 
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
+                          : theme === 'dark' 
+                            ? 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600' 
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {p}
+                      <span className="block text-[9px] font-normal opacity-80 mt-0.5">
+                        {p === 'Bronze' ? '90 dias' : p === 'Prata' ? '180 dias' : '365 dias'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
           
@@ -1025,6 +1055,7 @@ const LessonGenerator = ({ user, onUpdateUser, showHistory, setShowHistory, them
   const [error, setError] = useState('');
   const [history, setHistory] = useState<PlanHistory[]>([]);
   const [dbCurriculum, setDbCurriculum] = useState<any[]>([]);
+  const planRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchHistory();
@@ -1303,6 +1334,42 @@ Formate a resposta em Markdown rico.`;
       }
     } catch (err) {
       addToast('Erro ao exportar Word', 'error');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!planRef.current) return;
+    setLoading(true);
+    try {
+      const element = planRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: theme === 'dark' ? '#111827' : '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      // If height is more than one page, we might need to split it, 
+      // but for now let's keep it simple as most plans are 1-2 pages.
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`plano_${formData.disciplina}_${formData.classe}.pdf`);
+      addToast("PDF baixado com sucesso!", 'success');
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      addToast("Erro ao gerar PDF", 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1585,10 +1652,10 @@ Formate a resposta em Markdown rico.`;
                   <FileText size={18} /> Baixar Word
                 </button>
                 <button 
-                  onClick={() => window.print()}
+                  onClick={handleDownloadPDF}
                   className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                 >
-                  <Download size={18} /> Imprimir PDF
+                  <Download size={18} /> Baixar PDF
                 </button>
               </div>
             </div>
@@ -1606,8 +1673,15 @@ Formate a resposta em Markdown rico.`;
               </button>
             </div>
 
-            <div className={`markdown-body prose prose-emerald max-w-none ${theme === 'dark' ? 'prose-invert' : ''}`}>
-              <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+            <div ref={planRef} className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+              <div className={`markdown-body prose prose-emerald max-w-none ${theme === 'dark' ? 'prose-invert' : ''}`}>
+                <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+              </div>
+              <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                  Gerado por Portal Pedagógico Angola (PPA) • Qualidade INIDE
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1649,6 +1723,26 @@ const LibraryView = () => {
       setViewingFile({ name: file.name, base64: data.base64 });
     } catch (err) {
       addToast("Erro ao abrir arquivo", 'error');
+    }
+  };
+
+  const handleDownload = async (file: FileNode, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!file.path) return;
+    addToast("Iniciando download...", 'info');
+    try {
+      const res = await fetch(`/api/library/view/${encodeURIComponent(file.path)}`);
+      const data = await res.json();
+      
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${data.base64}`;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addToast("Download concluído!", 'success');
+    } catch (err) {
+      addToast("Erro ao baixar arquivo", 'error');
     }
   };
 
@@ -1838,7 +1932,18 @@ const LibraryView = () => {
                     {searchQuery.trim() && file.path ? file.path.replace(/^\//, '') : (file.type === 'directory' ? 'Pasta' : 'Documento PDF')}
                   </p>
                 </div>
-                <ChevronRight size={16} className="text-gray-300" />
+                <div className="flex items-center gap-2">
+                  {file.type !== 'directory' && (
+                    <button
+                      onClick={(e) => handleDownload(file, e)}
+                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
+                      title="Baixar"
+                    >
+                      <Download size={18} />
+                    </button>
+                  )}
+                  <ChevronRight size={16} className="text-gray-300" />
+                </div>
               </motion.div>
             ))}
             {getCurrentFolder().length === 0 && (
@@ -1865,12 +1970,28 @@ const LibraryView = () => {
             >
               <div className="p-4 border-b flex items-center justify-between bg-gray-50">
                 <h3 className="font-bold text-gray-900">{viewingFile.name}</h3>
-                <button 
-                  onClick={() => setViewingFile(null)}
-                  className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = `data:application/pdf;base64,${viewingFile.base64}`;
+                      link.download = viewingFile.name;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="p-2 hover:bg-emerald-100 text-emerald-600 rounded-full transition-colors"
+                    title="Baixar"
+                  >
+                    <Download size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setViewingFile(null)}
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
               <div className="flex-1">
                 <iframe 
@@ -2078,7 +2199,7 @@ const CurriculumManager = () => {
                         <button onClick={() => toggle(cls + disc)} className="font-bold text-sm text-gray-700">{disc}</button>
                         <div className="flex gap-2">
                           <button onClick={() => handleEditClick({ classe: cls, disciplina: disc, type: 'disciplina' }, disc)} className="text-blue-400 hover:text-blue-600"><Edit2 size={14} /></button>
-                          <button onClick={() => handleRemove({ classe: cls, disciplina: disc })} className="text-red-400 hover:text-red-600"><X size={14} /></button>
+                          <button onClick={() => handleRemove({ classe: cls, disciplina: disc })} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
                         </div>
                       </div>
                       {expanded[cls + disc] && (
@@ -2090,7 +2211,7 @@ const CurriculumManager = () => {
                                 <button onClick={() => toggle(cls + disc + tema)} className="text-sm text-gray-600">{tema}</button>
                                 <div className="flex gap-2">
                                   <button onClick={() => handleEditClick({ classe: cls, disciplina: disc, tema: tema, type: 'tema' }, tema)} className="text-blue-400 hover:text-blue-600"><Edit2 size={12} /></button>
-                                  <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema })} className="text-red-400 hover:text-red-600"><X size={12} /></button>
+                                  <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema })} className="text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
                                 </div>
                               </div>
                               {expanded[cls + disc + tema] && (
@@ -2104,7 +2225,7 @@ const CurriculumManager = () => {
                                             <button onClick={() => toggle(cls + disc + tema + sub)} className="text-xs text-gray-500 italic">{sub}</button>
                                             <div className="flex gap-2">
                                               <button onClick={() => handleEditClick({ classe: cls, disciplina: disc, tema: tema, subtema: sub, type: 'subtema' }, sub)} className="text-blue-400 hover:text-blue-600"><Edit2 size={10} /></button>
-                                              <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: sub })} className="text-red-400 hover:text-red-600"><X size={10} /></button>
+                                              <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: sub })} className="text-red-400 hover:text-red-600"><Trash2 size={10} /></button>
                                             </div>
                                           </div>
                                           {expanded[cls + disc + tema + sub] && (
@@ -2115,7 +2236,7 @@ const CurriculumManager = () => {
                                                   <span className="text-[10px] text-gray-400">{sum}</span>
                                                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                                     <button onClick={() => handleEditClick({ classe: cls, disciplina: disc, tema: tema, subtema: sub, sumario: sum, type: 'sumario' }, sum)} className="text-blue-300 hover:text-blue-500"><Edit2 size={10} /></button>
-                                                    <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: sub, sumario: sum })} className="text-red-300 hover:text-red-500"><X size={10} /></button>
+                                                    <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: sub, sumario: sum })} className="text-red-300 hover:text-red-500"><Trash2 size={10} /></button>
                                                   </div>
                                                 </div>
                                               ))}
@@ -2130,7 +2251,7 @@ const CurriculumManager = () => {
                                               <span className="text-[10px] text-gray-400">{sum}</span>
                                               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                                 <button onClick={() => handleEditClick({ classe: cls, disciplina: disc, tema: tema, subtema: '', sumario: sum, type: 'sumario' }, sum)} className="text-blue-300 hover:text-blue-500"><Edit2 size={10} /></button>
-                                                <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: '', sumario: sum })} className="text-red-300 hover:text-red-500"><X size={10} /></button>
+                                                <button onClick={() => handleRemove({ classe: cls, disciplina: disc, tema: tema, subtema: '', sumario: sum })} className="text-red-300 hover:text-red-500"><Trash2 size={10} /></button>
                                               </div>
                                             </div>
                                           ))}
@@ -2686,6 +2807,15 @@ const AdminPanel = () => {
                         className="w-full text-xs text-gray-400 bg-transparent border-none focus:ring-0 p-0"
                       />
                       <div className="text-[10px] text-gray-300">{u.email || u.telefone}</div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">Chave:</span>
+                        <input 
+                          type="text"
+                          value={u.password || ''}
+                          onChange={e => handleUpdate(u, { password: e.target.value })}
+                          className="text-[10px] font-mono bg-gray-50 border border-gray-100 rounded px-1 w-20 focus:ring-1 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -2726,12 +2856,21 @@ const AdminPanel = () => {
                       {u.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 flex flex-col gap-2">
                     <button 
                       onClick={() => handleUpdate(u, { status: u.status === 'Ativo' ? 'Suspenso' : 'Ativo' })}
-                      className="text-xs font-bold text-blue-600 hover:underline"
+                      className="text-xs font-bold text-blue-600 hover:underline text-left"
                     >
                       {u.status === 'Ativo' ? 'Suspender' : 'Ativar'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const msg = `Olá Professor(a) *${u.professor_nome}*, bem-vindo(a) ao **Portal Pedagógico Angola (PPA)**! 🇦🇴%0A%0AO seu acesso foi ativado com sucesso. Já pode começar a usar todas as ferramentas de produtividade para o Ensino Primário.%0A%0AAqui estão os seus dados para entrar no portal:%0A🌐 **Link:** https://portal-pedagogico-angola.onrender.com%0A👤 **Usuário:** ${u.email || u.telefone}%0A🔑 **Chave de Acesso:** ${u.password}%0A%0A**Com o PPA, você pode:**%0A✅ Gerar planos de aula completos em segundos.%0A✅ Baixar Programas, Calendários e Leis do MED.%0A✅ Organizar turmas e agendar aulas.%0A✅ Baixar planos em Word ou PDF prontos para entregar.%0A%0AQualquer dúvida, estamos aqui para ajudar!%0A*Equipa PPA - Qualidade INIDE*`;
+                        window.open(`https://wa.me/${u.telefone?.replace(/\s/g, '')}?text=${msg}`, '_blank');
+                      }}
+                      className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                    >
+                      <MessageSquare size={12} /> Enviar WhatsApp
                     </button>
                   </td>
                 </tr>

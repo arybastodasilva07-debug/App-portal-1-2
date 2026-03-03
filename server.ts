@@ -340,26 +340,30 @@ async function startServer() {
   });
 
   app.post("/api/auth/register", (req, res) => {
-    const { email, telefone, password, escola, professor_nome, provincia, municipio } = req.body;
+    const { email, telefone, password, escola, professor_nome, provincia, municipio, plano_tipo } = req.body;
+    // Generate a random 6-digit password if none provided
+    const finalPassword = password || Math.floor(100000 + Math.random() * 900000).toString();
+    
     try {
-      const result = db.prepare("INSERT INTO users (email, telefone, password, status, escola, professor_nome, provincia, municipio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+      const result = db.prepare("INSERT INTO users (email, telefone, password, status, escola, professor_nome, provincia, municipio, plano_tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
         email || null,
         telefone || null,
-        password || null,
+        finalPassword,
         'Pendente',
         escola,
         professor_nome,
         provincia,
-        municipio
+        municipio,
+        plano_tipo || 'Bronze'
       );
-      res.json({ id: result.lastInsertRowid });
+      res.json({ id: result.lastInsertRowid, password: finalPassword });
     } catch (e) {
       res.status(400).json({ error: "E-mail ou Telefone já cadastrado" });
     }
   });
 
   app.post("/api/auth/request-email", async (req, res) => {
-    const { email, telefone, professor_nome, escola, provincia, municipio } = req.body;
+    const { email, telefone, professor_nome, escola, provincia, municipio, plano_tipo } = req.body;
     
     // Fetch SMTP settings from database
     const settingsRows = db.prepare("SELECT key, value FROM settings WHERE key IN ('smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'admin_email')").all() as { key: string, value: string }[];
@@ -397,7 +401,10 @@ async function startServer() {
         Escola: ${escola}
         Província: ${provincia}
         Município: ${municipio}
-        E-mail: ${email || 'N/A'}
+        Plano Escolhido: ${plano_tipo || 'Bronze'}
+        
+        Contacto:
+        Email: ${email || 'N/A'}
         Telefone: ${telefone || 'N/A'}
         
         Por favor, revise o pedido no painel administrativo.
@@ -908,7 +915,7 @@ async function startServer() {
 
   app.get("/api/admin/users", (req, res) => {
     try {
-      const users = db.prepare("SELECT id, email, telefone, data_ativacao, data_expiracao, plano_tipo, limite_planos, planos_consumidos, status, is_admin, escola, professor_nome, provincia, municipio, numero_agente, biografia, especializacoes, foto_url FROM users").all();
+      const users = db.prepare("SELECT id, email, telefone, password, data_ativacao, data_expiracao, plano_tipo, limite_planos, planos_consumidos, status, is_admin, escola, professor_nome, provincia, municipio, numero_agente, biografia, especializacoes, foto_url FROM users").all();
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -917,7 +924,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/update-user", (req, res) => {
-    const { id, data_expiracao, plano_tipo, limite_planos, status } = req.body;
+    const { id, data_expiracao, plano_tipo, limite_planos, status, password } = req.body;
     const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User;
     
     const wasPendente = user.status === 'Pendente';
@@ -925,9 +932,9 @@ async function startServer() {
 
     db.prepare(`
       UPDATE users 
-      SET data_expiracao = ?, plano_tipo = ?, limite_planos = ?, status = ?, data_ativacao = ?
+      SET data_expiracao = ?, plano_tipo = ?, limite_planos = ?, status = ?, data_ativacao = ?, password = ?
       WHERE id = ?
-    `).run(data_expiracao, plano_tipo, limite_planos, status, new Date().toISOString(), id);
+    `).run(data_expiracao, plano_tipo, limite_planos, status, new Date().toISOString(), password || user.password, id);
 
     let activationMessage = null;
     if (wasPendente && isNowAtivo) {
